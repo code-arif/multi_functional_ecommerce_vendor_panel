@@ -40,7 +40,7 @@ export const authApi = {
 // ═══════════════════════════════════════════
 export const vendorApi = {
   profile:        () => client.get('/vendor/profile'),
-  updateProfile:  d  => client.post('/vendor/profile', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  updateProfile:  d  => client.post('/vendor/profile?_method=PUT', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
   uploadDocument: d  => client.post('/vendor/documents', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
   documents:      () => client.get('/vendor/documents'),
 }
@@ -144,6 +144,17 @@ export const supportApi = {
 // ═══════════════════════════════════════════
 export const dashboardApi = {
   stats: () => client.get('/vendor/dashboard'),
+}
+
+// ═══════════════════════════════════════════
+// STAFF (vendor-specific)
+// ═══════════════════════════════════════════
+export const staffApi = {
+  list:     ()      => client.get('/vendor/staff'),
+  store:    d       => client.post('/vendor/staff', d),
+  toggle:   id      => client.post(`/vendor/staff/${id}/toggle-status`),
+  update:   (id,d)  => client.put(`/vendor/staff/${id}`, d),
+  destroy:  id      => client.delete(`/vendor/staff/${id}`),
 }
 
 // ═══════════════════════════════════════════
