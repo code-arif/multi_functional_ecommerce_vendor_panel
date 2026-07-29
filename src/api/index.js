@@ -40,7 +40,7 @@ export const authApi = {
 // ═══════════════════════════════════════════
 export const vendorApi = {
   profile:        () => client.get('/vendor/profile'),
-  updateProfile:  d  => client.put('/vendor/profile', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  updateProfile:  d  => client.post('/vendor/profile', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
   uploadDocument: d  => client.post('/vendor/documents', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
   documents:      () => client.get('/vendor/documents'),
 }

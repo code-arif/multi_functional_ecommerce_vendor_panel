@@ -9,7 +9,7 @@ export default defineConfig({
       "@": resolve(__dirname, "src"),
       "@ecom/ui": resolve(__dirname, "../packages/ui/src"),
     },
-    dedupe: ["@heroicons/vue", "lucide-vue-next", "vue"],
+    dedupe: ["@heroicons/vue", "lucide-vue-next", "vue", "vue-toastification", "date-fns"],
   },
   server: {
     port: 3003,
