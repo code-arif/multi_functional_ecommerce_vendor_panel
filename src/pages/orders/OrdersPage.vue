@@ -1,16 +1,320 @@
 <template>
   <div>
     <Breadcrumb :items="breadcrumbItems" />
-    <div class="card p-8 text-center" :style="{ color: 'var(--text-muted)' }">
-      <ClipboardDocumentListIcon class="w-10 h-10 mx-auto mb-3" />
-      <h3 class="text-lg font-semibold mb-1" :style="{ color: 'var(--text-primary)' }">Orders</h3>
-      <p class="text-sm">View and manage orders for your shop.</p>
+
+    <!-- Bulk Action Bar -->
+    <transition name="panel-slide">
+      <div v-if="selectedOrders.size > 0" class="card p-3 mb-4 flex items-center gap-3"
+        :style="{ borderColor: 'var(--color-primary)', borderWidth: '1.5px' }">
+        <span class="text-sm font-semibold" :style="{ color: 'var(--text-primary)' }">
+          {{ selectedOrders.size }} selected
+        </span>
+        <div class="flex items-center gap-2 ml-auto">
+          <SelectBox
+            v-model="bulkStatus"
+            :options="bulkStatusOptions"
+            placeholder="Change status to..."
+            size="sm"
+          />
+          <button @click="applyBulkStatus" :disabled="!bulkStatus" class="btn-primary text-xs py-1.5 px-3">
+            Apply
+          </button>
+          <button @click="clearSelection"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            :style="{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }"
+            @mouseenter="e => e.target.style.backgroundColor = 'var(--border-light)'"
+            @mouseleave="e => e.target.style.backgroundColor = 'transparent'">
+            Clear
+          </button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Date Range Filter Panel -->
+    <transition name="panel-slide">
+      <div v-if="showFilters" class="card p-4 mb-4 flex flex-wrap items-end gap-4">
+        <div>
+          <label class="label">Order Date</label>
+          <DatePicker
+            v-model:from="dateFrom"
+            v-model:to="dateTo"
+            :presets="datePresets"
+            range
+            placeholder="Order date"
+            display-format="MMM dd, yyyy"
+          />
+        </div>
+        <button @click="load(1)" class="btn-primary text-sm py-1.5 px-4">Apply</button>
+        <button @click="clearDateFilter"
+          v-if="dateFrom || dateTo"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+          :style="{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }"
+          @mouseenter="e => e.target.style.backgroundColor = 'var(--border-light)'"
+          @mouseleave="e => e.target.style.backgroundColor = 'transparent'">
+          Clear Dates
+        </button>
+      </div>
+    </transition>
+
+    <div class="w-full overflow-x-auto">
+      <DataTable
+        :items="orders"
+        :columns="columns"
+        :loading="loading"
+        searchable
+        :pagination="pagination"
+        search-placeholder="Order number, name, phone..."
+        empty-text="No orders found"
+        @search="q => { search = q; load(1) }"
+        @page="load"
+      >
+        <template #actions>
+          <button @click="showFilters = !showFilters"
+            class="px-3 py-2 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+            :style="{
+              border: '1px solid var(--border)',
+              color: showFilters ? 'var(--color-primary)' : 'var(--text-secondary)',
+              borderColor: showFilters ? 'var(--color-primary)' : 'var(--border)'
+            }"
+            @mouseenter="e => { if(!showFilters) e.target.style.backgroundColor = 'var(--border-light)' }"
+            @mouseleave="e => { if(!showFilters) e.target.style.backgroundColor = 'transparent' }">
+            <FunnelIcon class="w-4 h-4" />
+            Filters
+          </button>
+          <button @click="exportOrders"
+            class="px-3 py-2 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+            :style="{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }"
+            @mouseenter="e => e.target.style.backgroundColor = 'var(--border-light)'"
+            @mouseleave="e => e.target.style.backgroundColor = 'transparent'">
+            <ArrowDownTrayIcon class="w-4 h-4" />
+            Export
+          </button>
+          <button @click="load()"
+            class="px-3 py-2 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+            :style="{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }"
+            @mouseenter="e => e.target.style.backgroundColor = 'var(--border-light)'"
+            @mouseleave="e => e.target.style.backgroundColor = 'transparent'"
+            title="Refresh">
+            <ArrowPathIcon class="w-4 h-4" />
+          </button>
+        </template>
+
+        <template #filters>
+          <SelectBox v-model="statusFilter" :options="statusOptions" placeholder="All Status" size="md" @change="load(1)" />
+        </template>
+
+        <template #empty-icon>
+          <ClipboardDocumentListIcon class="w-10 h-10 mx-auto" :style="{ color: 'var(--text-muted)' }" />
+        </template>
+
+        <template #default="{ item }">
+          <td class="table-cell w-10">
+            <input type="checkbox"
+              :checked="selectedOrders.has(item.id)"
+              @change="toggleSelect(item.id)"
+              class="w-4 h-4 rounded cursor-pointer"
+              :style="{ accentColor: 'var(--color-primary)' }"
+            />
+          </td>
+          <td class="table-cell">
+            <p class="font-bold text-sm" :style="{ color: 'var(--text-primary)' }">#{{ item.order_number }}</p>
+            <p class="text-xs" :style="{ color: 'var(--text-muted)' }">{{ formatDate(item.created_at) }}</p>
+          </td>
+
+          <td class="table-cell">
+            <p class="font-semibold text-sm" :style="{ color: 'var(--text-primary)' }">
+              {{ item.shipping_address?.name || item.user?.name || 'N/A' }}
+            </p>
+            <p class="text-xs" :style="{ color: 'var(--text-muted)' }">
+              {{ item.shipping_address?.phone || item.user?.phone || '' }}
+            </p>
+          </td>
+
+          <td class="table-cell">
+            <StatusBadge :value="item.status" />
+          </td>
+
+          <td class="table-cell">
+            <StatusBadge :value="item.payment_status" />
+          </td>
+
+          <td class="table-cell">
+            <p class="font-bold" :style="{ color: 'var(--color-primary)' }">
+              ৳{{ Number(item.total || item.total_amount).toLocaleString() }}
+            </p>
+            <p class="text-xs uppercase" :style="{ color: 'var(--text-muted)' }">
+              {{ item.payment_method || '' }}
+            </p>
+          </td>
+
+          <td class="table-cell text-right">
+            <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+              <Tooltip text="View">
+                <router-link :to="`/orders/${item.id}`"
+                  class="p-1.5 rounded-lg transition-all inline-flex items-center"
+                  :style="{
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-muted)'
+                  }"
+                  @mouseenter="e => { e.target.style.borderColor = 'var(--color-primary)'; e.target.style.color = 'var(--color-primary)' }"
+                  @mouseleave="e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--text-muted)' }">
+                  <EyeIcon class="w-4 h-4" />
+                </router-link>
+              </Tooltip>
+            </div>
+          </td>
+        </template>
+      </DataTable>
     </div>
   </div>
 </template>
+
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { startOfYear } from 'date-fns'
+import { useToast } from 'vue-toastification'
 import Breadcrumb from '@ecom/ui/components/Breadcrumb.vue'
+import DataTable from '@ecom/ui/components/DataTable.vue'
+import StatusBadge from '@ecom/ui/components/StatusBadge.vue'
+import SelectBox from '@ecom/ui/components/SelectBox.vue'
+import DatePicker from '@ecom/ui/components/DatePicker.vue'
+import Tooltip from '@ecom/ui/components/Tooltip.vue'
+import { orderApi } from '@/api'
+import { useCsvExport } from '@ecom/ui/composables/useCsvExport'
+
+import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
 import { ClipboardDocumentListIcon } from '@heroicons/vue/24/outline'
-const breadcrumbItems = computed(() => [{ label: 'Orders', icon: ClipboardDocumentListIcon }])
+import { EyeIcon, FunnelIcon } from '@heroicons/vue/24/outline'
+
+const toast = useToast()
+const { exportToCsv } = useCsvExport()
+
+const orders = ref([])
+const pagination = ref(null)
+const loading = ref(true)
+
+const search = ref('')
+const statusFilter = ref('')
+const showFilters = ref(false)
+const dateFrom = ref('')
+const dateTo = ref('')
+
+const breadcrumbItems = computed(() => [
+  { label: 'Orders', icon: ClipboardDocumentListIcon }
+])
+
+/* ─── Bulk Actions ─── */
+const selectedOrders = ref(new Set())
+const bulkStatus = ref('')
+const bulkStatusOptions = [
+  { value: '', label: 'Change status to...' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'shipped', label: 'Shipped' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'cancelled', label: 'Cancelled' },
+]
+
+const statusOptions = [
+  { value: '', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'shipped', label: 'Shipped' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'returned', label: 'Returned' },
+]
+
+function toggleSelect(id) {
+  const newSet = new Set(selectedOrders.value)
+  if (newSet.has(id)) newSet.delete(id)
+  else newSet.add(id)
+  selectedOrders.value = newSet
+}
+
+function clearSelection() {
+  selectedOrders.value = new Set()
+  bulkStatus.value = ''
+}
+
+async function applyBulkStatus() {
+  if (!bulkStatus.value || !selectedOrders.value.size) return
+  const ids = Array.from(selectedOrders.value)
+  try {
+    await Promise.all(ids.map(id => orderApi.updateStatus(id, { status: bulkStatus.value })))
+    toast.success(`Updated ${ids.length} orders to "${bulkStatus.value}"`)
+    clearSelection()
+    load(pagination.value?.current_page || 1)
+  } catch {
+    toast.error('Failed to update some orders.')
+  }
+}
+
+const datePresets = [
+  { label: '7 Days', days: 7 },
+  { label: '30 Days', days: 30 },
+  { label: '90 Days', days: 90 },
+  { label: 'This Year', getRange: () => ({ from: startOfYear(new Date()), to: new Date() }) },
+]
+
+function clearDateFilter() {
+  dateFrom.value = ''
+  dateTo.value = ''
+  load(1)
+}
+
+const columns = [
+  { key: 'select', label: '', class: 'w-10' },
+  { key: 'order', label: 'Order', class: 'min-w-[150px]' },
+  { key: 'customer', label: 'Customer', class: 'min-w-[180px]' },
+  { key: 'status', label: 'Status', class: 'min-w-[130px]' },
+  { key: 'payment', label: 'Payment', class: 'min-w-[130px]' },
+  { key: 'total', label: 'Total', class: 'min-w-[130px]' },
+  { key: 'actions', label: 'Action', class: 'w-20 text-right' },
+]
+
+function formatDate(d) {
+  return d
+    ? new Date(d).toLocaleDateString('en-BD', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    : ''
+}
+
+function exportOrders() {
+  const cols = [
+    { key: 'order_number', label: 'Order #' },
+    { key: 'customer_name', label: 'Customer', transform: (_, item) => item.shipping_address?.name || '' },
+    { key: 'status', label: 'Status' },
+    { key: 'payment_status', label: 'Payment' },
+    { key: 'total', label: 'Total (৳)', transform: v => `৳${Number(v).toLocaleString()}` },
+    { key: 'created_at', label: 'Date', transform: v => v ? new Date(v).toLocaleDateString() : '' },
+  ]
+  const totalOrders = pagination.value?.total || orders.value.length
+  exportToCsv(orders.value, cols, `orders-export-${totalOrders}-orders`)
+}
+
+async function load(page = 1) {
+  loading.value = true
+  try {
+    const res = await orderApi.list({
+      page,
+      search: search.value || undefined,
+      status: statusFilter.value || undefined,
+      date_from: dateFrom.value || undefined,
+      date_to: dateTo.value || undefined,
+      per_page: 20
+    })
+    orders.value = res.data.data || []
+    pagination.value = res.data.meta || res.data.pagination
+    selectedOrders.value = new Set()
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => load())
 </script>
