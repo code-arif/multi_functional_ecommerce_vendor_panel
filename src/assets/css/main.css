@@ -1,0 +1,290 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================================================
+   THEME-AWARE UTILITY OVERRIDES
+   ======================================================================== */
+@layer utilities {
+    .text-gray-900, .text-gray-800 { color: var(--text-primary) !important; }
+    .text-gray-700, .text-gray-600 { color: var(--text-secondary) !important; }
+    .text-gray-500, .text-gray-400, .text-gray-300 { color: var(--text-muted) !important; }
+    .bg-gray-50, .bg-gray-100 { background-color: var(--border-light) !important; }
+    .border-gray-100 { border-color: var(--border-light) !important; }
+    .border-gray-200, .border-gray-300 { border-color: var(--border) !important; }
+    .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover { background-color: var(--border-light) !important; }
+    .hover\:bg-gray-50\/60:hover { background-color: color-mix(in srgb, var(--border-light) 60%, transparent) !important; }
+    .bg-white { background-color: var(--surface) !important; }
+    .hover\:bg-white:hover { background-color: var(--surface) !important; }
+    .bg-gray-50\/50 { background-color: color-mix(in srgb, var(--border-light) 50%, transparent) !important; }
+    .bg-gray-50\/80 { background-color: color-mix(in srgb, var(--border-light) 80%, transparent) !important; }
+    .hover\:bg-red-50:hover { background-color: color-mix(in srgb, var(--danger) 10%, transparent) !important; }
+
+    /* Primary color overrides */
+    .text-\[\#2E7D32\] { color: var(--color-primary) !important; }
+    .bg-\[\#2E7D32\] { background-color: var(--color-primary) !important; }
+    .border-\[\#2E7D32\] { border-color: var(--color-primary) !important; }
+    .text-\[\#4CAF50\] { color: var(--color-primary-light) !important; }
+    .hover\:border-\[\#4CAF50\]:hover { border-color: var(--color-primary) !important; }
+    .hover\:text-\[\#4CAF50\]:hover { color: var(--color-primary) !important; }
+    .hover\:bg-green-50:hover { background-color: var(--color-primary-pale) !important; }
+}
+
+:root {
+    --sidebar-width: 256px;
+    --header-height: 60px;
+}
+
+/* ========================================================================
+   THEME SYSTEM — CSS Custom Properties
+   ======================================================================== */
+
+/* DEFAULT (Green) — Light */
+:root,
+[data-theme="default"] {
+    --color-primary: #2E7D32;
+    --color-primary-light: #4CAF50;
+    --color-primary-pale: #E8F5E9;
+    --color-primary-dark: #1B5E20;
+    --app-bg: #F8FAFC;
+    --surface: #ffffff;
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --text-muted: #94A3B8;
+    --border: #E2E8F0;
+    --border-light: #F1F5F9;
+    --sidebar-bg: #0F172A;
+    --sidebar-hover: #1E293B;
+    --sidebar-text: #CBD5E1;
+    --sidebar-text-muted: #64748B;
+    --sidebar-border: rgba(255,255,255,0.08);
+    --sidebar-active-bg: #2E7D32;
+    --sidebar-active-text: #ffffff;
+    --sidebar-search-bg: #1E293B;
+    --sidebar-search-border: #334155;
+    --sidebar-search-placeholder: #64748B;
+    --sidebar-logo-bg: #2E7D32;
+    --navbar-bg: #ffffff;
+    --navbar-border: #E2E8F0;
+    --navbar-text: #475569;
+    --navbar-text-muted: #94A3B8;
+    --shadow-card: 0 1px 8px rgba(0,0,0,0.06);
+    --shadow-modal: 0 20px 60px rgba(0,0,0,0.15);
+    --shadow-dropdown: 0 10px 40px rgba(0,0,0,0.12);
+    --danger: #EF4444;
+    --warning: #F59E0B;
+    --success: #10B981;
+    --info: #3B82F6;
+}
+
+/* TINT (Blue) */
+[data-theme="tint"] {
+    --color-primary: #2563EB;
+    --color-primary-light: #3B82F6;
+    --color-primary-pale: #DBEAFE;
+    --color-primary-dark: #1D4ED8;
+    --app-bg: #F0F5FF;
+    --sidebar-active-bg: #2563EB;
+    --sidebar-logo-bg: #2563EB;
+}
+
+/* DARK AQUA (Teal) */
+[data-theme="dark-aqua"] {
+    --color-primary: #0D9488;
+    --color-primary-light: #14B8A6;
+    --color-primary-pale: #CCFBF1;
+    --color-primary-dark: #0F766E;
+    --app-bg: #F2FCF9;
+    --sidebar-active-bg: #0D9488;
+    --sidebar-logo-bg: #0D9488;
+}
+
+/* ROYAL (Violet) */
+[data-theme="royal"] {
+    --color-primary: #7C3AED;
+    --color-primary-light: #A78BFA;
+    --color-primary-pale: #EDE9FE;
+    --color-primary-dark: #5B21B6;
+    --app-bg: #F5F3FF;
+    --sidebar-active-bg: #7C3AED;
+    --sidebar-logo-bg: #7C3AED;
+}
+
+/* CRIMSON (Red) */
+[data-theme="crimson"] {
+    --color-primary: #DC2626;
+    --color-primary-light: #F87171;
+    --color-primary-pale: #FEE2E2;
+    --color-primary-dark: #B91C1C;
+    --app-bg: #FFF5F5;
+    --sidebar-active-bg: #DC2626;
+    --sidebar-logo-bg: #DC2626;
+}
+
+/* AMBER (Warmth) */
+[data-theme="amber"] {
+    --color-primary: #D97706;
+    --color-primary-light: #FBBF24;
+    --color-primary-pale: #FEF3C7;
+    --color-primary-dark: #B45309;
+    --app-bg: #FFFBEB;
+    --sidebar-active-bg: #D97706;
+    --sidebar-logo-bg: #D97706;
+}
+
+/* ROSE (Modern Pink) */
+[data-theme="rose"] {
+    --color-primary: #E11D48;
+    --color-primary-light: #FB7185;
+    --color-primary-pale: #FFE4E6;
+    --color-primary-dark: #BE123C;
+    --app-bg: #FFF1F2;
+    --sidebar-active-bg: #E11D48;
+    --sidebar-logo-bg: #E11D48;
+}
+
+/* INDIGO (Professional) */
+[data-theme="indigo"] {
+    --color-primary: #6366F1;
+    --color-primary-light: #818CF8;
+    --color-primary-pale: #E0E7FF;
+    --color-primary-dark: #4F46E5;
+    --app-bg: #F0EFFF;
+    --sidebar-active-bg: #6366F1;
+    --sidebar-logo-bg: #6366F1;
+}
+
+body {
+    font-family: "Roboto", sans-serif;
+    background: var(--app-bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+@layer components {
+    /* ---- Buttons ---- */
+    .btn-primary {
+        @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm;
+        background-color: var(--color-primary);
+        color: #fff;
+        transition: all 0.2s;
+    }
+    .btn-primary:hover { background-color: var(--color-primary-dark); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:focus-visible {
+        outline: 2px solid var(--color-primary-light);
+        outline-offset: 2px;
+    }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+        @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm border-2;
+        color: var(--color-primary);
+        border-color: var(--color-primary);
+        transition: all 0.2s;
+    }
+    .btn-secondary:hover { background-color: var(--color-primary-pale); }
+
+    .btn-danger {
+        @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm;
+        color: #fff;
+        background-color: var(--danger);
+    }
+    .btn-danger:hover { background-color: #DC2626; }
+
+    .btn-ghost {
+        @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm;
+        color: var(--navbar-text);
+        transition: all 0.2s;
+    }
+    .btn-ghost:hover { background-color: var(--border-light); }
+
+    /* ---- Card ---- */
+    .card {
+        background-color: var(--surface);
+        border-radius: 0.5rem;
+        transition: background-color 0.25s ease, border-color 0.25s ease;
+    }
+
+    /* ---- Form Input ---- */
+    .input {
+        @apply w-full px-3 py-2.5 rounded-lg text-sm;
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        transition: border-color 0.15s, box-shadow 0.15s, background-color 0.25s ease;
+    }
+    .input::placeholder { color: var(--text-muted); }
+    .input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-light) 25%, transparent);
+    }
+    .input-sm { @apply input py-1.5 text-xs; }
+
+    .label {
+        @apply block text-xs font-semibold uppercase tracking-wide mb-1.5;
+        color: var(--text-muted);
+    }
+
+    /* ---- Badges ---- */
+    .badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    }
+    .badge-green { @apply badge; background-color: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); }
+    .badge-red { @apply badge; background-color: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+    .badge-yellow { @apply badge; background-color: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning); }
+    .badge-blue { @apply badge; background-color: color-mix(in srgb, var(--info) 15%, transparent); color: var(--info); }
+    .badge-gray { @apply badge; background-color: color-mix(in srgb, var(--text-muted) 15%, transparent); color: var(--text-muted); }
+    .badge-purple { @apply badge; background-color: color-mix(in srgb, #8B5CF6 15%, transparent); color: #8B5CF6; }
+
+    /* ---- Table ---- */
+    .table-header {
+        @apply text-xs font-semibold uppercase tracking-wide px-4 py-3 text-left;
+        color: var(--text-muted);
+    }
+    .table-cell {
+        @apply px-4 py-3.5 text-sm align-middle;
+        color: var(--text-secondary);
+    }
+    .table-row {
+        border-bottom: 1px solid var(--border-light);
+        transition: background-color 0.15s;
+    }
+    .table-row:hover {
+        background-color: color-mix(in srgb, var(--border-light) 60%, transparent);
+    }
+
+    .page-title {
+        @apply text-xl font-black;
+        color: var(--text-primary);
+    }
+
+    /* ---- Stats ---- */
+    .stat-card { @apply card p-5 flex items-center gap-4; }
+}
+
+/* ========================================================================
+   THEME TRANSITION SYSTEM
+   ======================================================================== */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+    transition-duration: 0.35s !important;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition-property: background-color, border-color, color, box-shadow, opacity !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeIn 0.25s ease both; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
