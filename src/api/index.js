@@ -29,10 +29,12 @@ client.interceptors.response.use(r => r, err => {
 // AUTH
 // ═══════════════════════════════════════════
 export const authApi = {
-  login:    d => client.post('/auth/vendor/login', d),
-  logout:   () => client.post('/auth/logout'),
-  me:       () => client.get('/auth/me'),
-  register: d => client.post('/vendor/register', d),
+  login:       d => client.post('/auth/vendor/login', d),
+  sendOtp:     d => client.post('/auth/vendor/otp/send', d),
+  verifyOtp:   d => client.post('/auth/vendor/otp/verify', d),
+  logout:      () => client.post('/auth/logout'),
+  me:          () => client.get('/auth/me'),
+  register:    d => client.post('/auth/vendor/register', d),
 }
 
 // ═══════════════════════════════════════════

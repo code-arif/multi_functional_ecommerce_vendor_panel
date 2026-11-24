@@ -14,17 +14,36 @@ export const useAuthStore = defineStore('auth', () => {
   const userEmail = computed(() => user.value?.email || '')
   const shopName = computed(() => shop.value?.shop_name || 'My Shop')
 
-  async function login(credentials) {
-    const res = await authApi.login(credentials)
-    const { user: u, token: t, shop: s } = res.data.data
+  function setAuthData(u, t, s) {
     user.value = u
     token.value = t
     shop.value = s || null
     localStorage.setItem('vendor_user', JSON.stringify(u))
     localStorage.setItem('vendor_token', t)
     if (s) localStorage.setItem('vendor_shop', JSON.stringify(s))
+  }
+
+  async function login(credentials) {
+    const res = await authApi.login(credentials)
+    const { user: u, token: t, shop: s } = res.data.data
+    setAuthData(u, t, s)
     useToast().success(`Welcome back, ${u.name}!`)
     router.push('/')
+  }
+
+  async function sendOtp(email) {
+    const res = await authApi.sendOtp({ email })
+    useToast().success(res.data.message || 'Verification code sent to your email.')
+    return res.data
+  }
+
+  async function verifyOtp(email, code) {
+    const res = await authApi.verifyOtp({ email, code })
+    const { user: u, token: t, shop: s } = res.data.data
+    setAuthData(u, t, s)
+    useToast().success(`Welcome back, ${u.name}!`)
+    router.push('/')
+    return res.data
   }
 
   async function logout() {
@@ -60,6 +79,8 @@ export const useAuthStore = defineStore('auth', () => {
     userEmail,
     shopName,
     login,
+    sendOtp,
+    verifyOtp,
     logout,
     fetchMe,
   }
