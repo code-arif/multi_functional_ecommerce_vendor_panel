@@ -15,6 +15,13 @@ client.interceptors.request.use(cfg => {
   return cfg
 })
 
+let inactiveRedirectLock = false
+let onVendorInactiveHandler = null
+
+export function setVendorInactiveHandler(fn) {
+  onVendorInactiveHandler = fn
+}
+
 client.interceptors.response.use(r => r, err => {
   if (err.response?.status === 401) {
     localStorage.removeItem('vendor_token')
@@ -23,9 +30,21 @@ client.interceptors.response.use(r => r, err => {
     if (window.location.pathname !== '/login') {
       window.location.href = '/login'
     }
+  } else if (err.response?.status === 403 && err.response?.data?.code === 'VENDOR_NOT_ACTIVE') {
+    const payload = err.response.data.data || {}
+    if (!inactiveRedirectLock) {
+      inactiveRedirectLock = true
+      useToast().warning(err.response.data.message || 'Your shop account is currently inactive.')
+      if (onVendorInactiveHandler) {
+        onVendorInactiveHandler(payload)
+      }
+      setTimeout(() => { inactiveRedirectLock = false }, 2500)
+    }
+  } else if (err.response?.status === 403) {
+    useToast().error(err.response?.data?.message || 'Access denied.')
+  } else if (err.response?.status === 500) {
+    useToast().error('Server error. Please try again.')
   }
-  if (err.response?.status === 403) useToast().error(err.response?.data?.message || 'Access denied.')
-  if (err.response?.status === 500) useToast().error('Server error. Please try again.')
   return Promise.reject(err)
 })
 

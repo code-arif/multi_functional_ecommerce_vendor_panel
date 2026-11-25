@@ -22,6 +22,12 @@ const routes = [
         name: 'dashboard',
         component: () => import('@/pages/DashboardPage.vue'),
       },
+      {
+        path: 'account-status',
+        name: 'account-status',
+        component: () => import('@/pages/AccountStatusPage.vue'),
+        meta: { allowInactiveVendor: true },
+      },
 
       // Products
       {
@@ -117,11 +123,13 @@ const routes = [
         path: 'support',
         name: 'support',
         component: () => import('@/pages/support/SupportPage.vue'),
+        meta: { allowInactiveVendor: true },
       },
       {
         path: 'support/:id',
         name: 'support-detail',
         component: () => import('@/pages/support/TicketDetailPage.vue'),
+        meta: { allowInactiveVendor: true },
       },
 
       // Settings
@@ -134,6 +142,7 @@ const routes = [
         path: 'settings/documents',
         name: 'settings-documents',
         component: () => import('@/pages/settings/DocumentsPage.vue'),
+        meta: { allowInactiveVendor: true },
       },
       {
         path: 'settings/addresses',
@@ -165,7 +174,15 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
   if (to.meta.requiresAuth && !auth.isLoggedIn) return next('/login')
-  if (to.meta.guest && auth.isLoggedIn) return next('/')
+  if (to.meta.guest && auth.isLoggedIn) {
+    return next(auth.isShopActive ? '/' : '/account-status')
+  }
+  if (auth.isLoggedIn && !auth.isShopActive && !to.meta.allowInactiveVendor) {
+    return next('/account-status')
+  }
+  if (auth.isLoggedIn && auth.isShopActive && to.name === 'account-status') {
+    return next('/')
+  }
   next()
 })
 

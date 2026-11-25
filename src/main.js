@@ -13,5 +13,15 @@ const pinia = createPinia()
 app.use(pinia).use(router)
 app.use(Toast, { position: POSITION.TOP_RIGHT, timeout: 3000, maxToasts: 3 })
 
+import { setVendorInactiveHandler } from './api'
 import { useAuthStore } from './stores/auth'
-useAuthStore(pinia).fetchMe().then(() => app.mount('#app'))
+
+const authStore = useAuthStore(pinia)
+setVendorInactiveHandler((payload) => {
+  authStore.setInactiveShopStatus(payload?.status || 'pending', payload?.rejection_reason ?? null)
+  if (router.currentRoute.value.path !== '/account-status') {
+    router.replace('/account-status')
+  }
+})
+
+authStore.fetchMe().then(() => app.mount('#app'))

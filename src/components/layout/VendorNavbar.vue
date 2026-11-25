@@ -10,6 +10,15 @@
 
     <h1 class="font-bold" :style="{ color: 'var(--text-primary)' }">{{ pageTitle }}</h1>
 
+    <router-link v-if="!auth.isShopActive" to="/account-status"
+      class="ml-2 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
+      :style="{
+        backgroundColor: auth.shopStatus === 'pending' ? 'color-mix(in srgb, var(--warning) 15%, transparent)' : 'color-mix(in srgb, var(--danger) 15%, transparent)',
+        color: auth.shopStatus === 'pending' ? 'var(--warning)' : 'var(--danger)'
+      }">
+      {{ auth.shopStatus }}
+    </router-link>
+
     <div class="ml-auto flex items-center gap-1">
       <!-- Notifications Dropdown -->
       <div class="relative" ref="notifDropdownRef">
@@ -120,14 +129,14 @@
               <p class="text-sm font-semibold truncate" :style="{ color: 'var(--text-primary)' }">{{ auth.userName }}</p>
               <p class="text-xs truncate" :style="{ color: 'var(--text-muted)' }">{{ auth.userEmail }}</p>
             </div>
-            <router-link to="/settings"
+            <router-link :to="auth.isShopActive ? '/settings' : '/account-status'"
               class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition"
               :style="{ color: 'var(--navbar-text)' }"
               @mouseenter="e => e.target.style.backgroundColor = 'var(--border-light)'"
               @mouseleave="e => e.target.style.backgroundColor = 'transparent'"
               @click="isProfileDropdownOpen = false">
               <Cog6ToothIcon class="w-4 h-4" />
-              Shop Settings
+              {{ auth.isShopActive ? 'Shop Settings' : 'Account Status' }}
             </router-link>
             <button @click="auth.logout()"
               class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition border-t"
@@ -179,6 +188,7 @@ const currentThemeColor = computed(() => {
 })
 
 const pageRoutes = {
+  '/account-status': 'Account Status',
   '/products/create': 'New Product',
   '/products': 'All Products',
   '/orders': 'Orders',

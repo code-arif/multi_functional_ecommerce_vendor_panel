@@ -12,7 +12,10 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => !!token.value)
   const userName = computed(() => user.value?.name || 'Vendor')
   const userEmail = computed(() => user.value?.email || '')
-  const shopName = computed(() => shop.value?.shop_name || 'My Shop')
+  const shopName = computed(() => shop.value?.shop_name || user.value?.vendor?.shop_name || 'My Shop')
+  const shopStatus = computed(() => shop.value?.status || user.value?.vendor?.status || 'active')
+  const isShopActive = computed(() => shopStatus.value === 'active')
+  const rejectionReason = computed(() => shop.value?.rejection_reason ?? user.value?.vendor?.rejection_reason ?? '')
 
   function setAuthData(u, t, s) {
     user.value = u
@@ -23,12 +26,39 @@ export const useAuthStore = defineStore('auth', () => {
     if (s) localStorage.setItem('vendor_shop', JSON.stringify(s))
   }
 
+  function setInactiveShopStatus(status, reason = null) {
+    if (shop.value) {
+      shop.value = { ...shop.value, status, rejection_reason: reason }
+      localStorage.setItem('vendor_shop', JSON.stringify(shop.value))
+    } else {
+      shop.value = { status, rejection_reason: reason }
+      localStorage.setItem('vendor_shop', JSON.stringify(shop.value))
+    }
+    if (user.value?.vendor) {
+      user.value = {
+        ...user.value,
+        vendor: { ...user.value.vendor, status, rejection_reason: reason },
+      }
+      localStorage.setItem('vendor_user', JSON.stringify(user.value))
+    }
+  }
+
+  function redirectAfterAuth(u, s) {
+    const status = s?.status || u?.vendor?.status || 'active'
+    if (status !== 'active') {
+      useToast().warning(`Signed in — your shop is currently ${status}.`)
+      router.push('/account-status')
+    } else {
+      useToast().success(`Welcome back, ${u.name}!`)
+      router.push('/')
+    }
+  }
+
   async function login(credentials) {
     const res = await authApi.login(credentials)
     const { user: u, token: t, shop: s } = res.data.data
     setAuthData(u, t, s)
-    useToast().success(`Welcome back, ${u.name}!`)
-    router.push('/')
+    redirectAfterAuth(u, s)
   }
 
   async function sendOtp(email) {
@@ -41,8 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
     const res = await authApi.verifyOtp({ email, code })
     const { user: u, token: t, shop: s } = res.data.data
     setAuthData(u, t, s)
-    useToast().success(`Welcome back, ${u.name}!`)
-    router.push('/')
+    redirectAfterAuth(u, s)
     return res.data
   }
 
@@ -92,7 +121,11 @@ export const useAuthStore = defineStore('auth', () => {
     userName,
     userEmail,
     shopName,
+    shopStatus,
+    isShopActive,
+    rejectionReason,
     setShop,
+    setInactiveShopStatus,
     login,
     sendOtp,
     verifyOtp,

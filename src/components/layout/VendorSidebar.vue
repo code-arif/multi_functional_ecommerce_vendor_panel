@@ -18,7 +18,17 @@
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-      <template v-for="group in navGroups" :key="group.name">
+      <div v-if="!auth.isShopActive && sidebarOpen"
+        class="mx-1 mb-2 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2"
+        :style="{
+          backgroundColor: 'color-mix(in srgb, var(--warning) 15%, transparent)',
+          color: 'var(--warning)'
+        }">
+        <ShieldExclamationIcon class="w-4 h-4 shrink-0" />
+        <span class="capitalize">Shop {{ auth.shopStatus }} — Limited Access</span>
+      </div>
+
+      <template v-for="group in visibleNavGroups" :key="group.name">
         <!-- Direct Link -->
         <router-link v-if="group.direct" :to="group.to"
           class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition relative group"
@@ -76,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ChevronDownIcon } from '@heroicons/vue/24/outline'
@@ -99,6 +109,7 @@ import {
   BuildingStorefrontIcon,
   DocumentCheckIcon,
   MapPinIcon,
+  ShieldExclamationIcon,
 } from '@heroicons/vue/24/outline'
 
 defineProps({ sidebarOpen: { type: Boolean, required: true } })
@@ -135,33 +146,33 @@ const navGroups = [
       { name: 'Stock History', to: '/inventory/logs', icon: ArrowPathIcon },
     ],
   },
-  {
-    name: 'Coupons', icon: TicketIcon,
-    direct: true, to: '/coupons',
-  },
-  {
-    name: 'Reviews', icon: StarIcon,
-    direct: true, to: '/reviews',
-  },
-  {
-    name: 'Finance', icon: WalletIcon,
-    items: [
-      { name: 'Wallet', to: '/wallet', icon: WalletIcon },
-      { name: 'Payouts', to: '/wallet/payouts', icon: CurrencyDollarIcon },
-      { name: 'Transactions', to: '/wallet/transactions', icon: BanknotesIcon },
-    ],
-  },
-  {
-    name: 'Shipping', icon: TruckIcon,
-    items: [
-      { name: 'Shipments', to: '/shipping', icon: TruckIcon },
-      { name: 'Pickups', to: '/shipping/pickups', icon: TruckIcon },
-    ],
-  },
-  {
-    name: 'Support', icon: QuestionMarkCircleIcon,
-    direct: true, to: '/support',
-  },
+  // {
+  //   name: 'Coupons', icon: TicketIcon,
+  //   direct: true, to: '/coupons',
+  // },
+  // {
+  //   name: 'Reviews', icon: StarIcon,
+  //   direct: true, to: '/reviews',
+  // },
+  // {
+  //   name: 'Finance', icon: WalletIcon,
+  //   items: [
+  //     { name: 'Wallet', to: '/wallet', icon: WalletIcon },
+  //     { name: 'Payouts', to: '/wallet/payouts', icon: CurrencyDollarIcon },
+  //     { name: 'Transactions', to: '/wallet/transactions', icon: BanknotesIcon },
+  //   ],
+  // },
+  // {
+  //   name: 'Shipping', icon: TruckIcon,
+  //   items: [
+  //     { name: 'Shipments', to: '/shipping', icon: TruckIcon },
+  //     { name: 'Pickups', to: '/shipping/pickups', icon: TruckIcon },
+  //   ],
+  // },
+  // {
+  //   name: 'Support', icon: QuestionMarkCircleIcon,
+  //   direct: true, to: '/support',
+  // },
   {
     name: 'Settings', icon: Cog6ToothIcon,
     items: [
@@ -173,6 +184,14 @@ const navGroups = [
     ],
   },
 ]
+
+const restrictedNavGroups = [
+  { name: 'Account Status', icon: ShieldExclamationIcon, direct: true, to: '/account-status' },
+  { name: 'KYC Documents', icon: DocumentCheckIcon, direct: true, to: '/settings/documents' },
+  { name: 'Support', icon: QuestionMarkCircleIcon, direct: true, to: '/support' },
+]
+
+const visibleNavGroups = computed(() => (auth.isShopActive ? navGroups : restrictedNavGroups))
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(openGroups))
