@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi } from '@/api'
+import { authApi, vendorApi } from '@/api'
 import { useToast } from 'vue-toastification'
 import router from '@/router'
 
@@ -59,12 +59,26 @@ export const useAuthStore = defineStore('auth', () => {
     router.push('/login')
   }
 
+  function setShop(s) {
+    shop.value = s || null
+    if (s) {
+      localStorage.setItem('vendor_shop', JSON.stringify(s))
+    } else {
+      localStorage.removeItem('vendor_shop')
+    }
+  }
+
   async function fetchMe() {
     if (!token.value) return
     try {
       const res = await authApi.me()
       user.value = res.data.data
       localStorage.setItem('vendor_user', JSON.stringify(user.value))
+      try {
+        const profileRes = await vendorApi.profile()
+        const shopData = profileRes.data?.data
+        if (shopData) setShop(shopData)
+      } catch {}
     } catch {
       logout()
     }
@@ -78,6 +92,7 @@ export const useAuthStore = defineStore('auth', () => {
     userName,
     userEmail,
     shopName,
+    setShop,
     login,
     sendOtp,
     verifyOtp,

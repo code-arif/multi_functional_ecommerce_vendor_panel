@@ -7,8 +7,11 @@
       <div class="lg:col-span-2">
         <div class="card overflow-hidden">
           <div class="flex items-center justify-between px-5 py-4 border-b" :style="{ borderColor: 'var(--border-light)' }">
-            <h3 class="font-bold text-sm" :style="{ color: 'var(--text-primary)' }">Staff Members</h3>
-            <button @click="showInviteForm = true" class="btn-primary text-xs py-1.5 px-3">
+            <div>
+              <h3 class="font-bold text-sm" :style="{ color: 'var(--text-primary)' }">Shop Staff Members</h3>
+              <p class="text-xs" :style="{ color: 'var(--text-muted)' }">Assign team roles for catalog, inventory, and order fulfillment</p>
+            </div>
+            <button @click="openInvite" class="btn-primary text-xs py-1.5 px-3">
               <PlusIcon class="w-4 h-4" />
               Invite Staff
             </button>
@@ -20,37 +23,56 @@
             No staff members yet. Invite your team!
           </div>
           <div v-else class="divide-y" :style="{ borderColor: 'var(--border-light)' }">
-            <div v-for="member in staff" :key="member.id" class="flex items-center gap-4 px-5 py-3.5">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0"
-                :style="{ backgroundColor: 'var(--color-primary)' }">
-                {{ (member.user?.name || 'S').charAt(0).toUpperCase() }}
+            <div v-for="member in staff" :key="memberKey(member)"
+              class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0"
+                  :style="{ backgroundColor: 'var(--color-primary)' }">
+                  {{ (member.user?.name || 'S').charAt(0).toUpperCase() }}
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold truncate" :style="{ color: 'var(--text-primary)' }">
+                    {{ member.user?.name || 'Staff' }}
+                  </p>
+                  <p class="text-xs truncate" :style="{ color: 'var(--text-muted)' }">
+                    {{ member.user?.email || '' }}
+                  </p>
+                </div>
               </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold" :style="{ color: 'var(--text-primary)' }">
-                  {{ member.user?.name || 'Staff' }}
-                </p>
-                <p class="text-xs" :style="{ color: 'var(--text-muted)' }">
-                  {{ member.user?.email || '' }}
-                </p>
+
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs px-2 py-1 rounded font-medium"
+                  :style="{
+                    backgroundColor: member.is_active ? 'color-mix(in srgb, var(--success) 15%, transparent)' : 'color-mix(in srgb, var(--text-muted) 15%, transparent)',
+                    color: member.is_active ? 'var(--success)' : 'var(--text-muted)'
+                  }">
+                  {{ member.is_active ? 'Active' : 'Inactive' }}
+                </span>
+
+                <select :value="member.role" @change="e => updateRole(member, e.target.value)"
+                  :disabled="busyKey === memberKey(member)"
+                  class="text-xs px-2 py-1 rounded border bg-transparent"
+                  :style="{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }">
+                  <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+
+                <button @click="toggleStaffStatus(member)"
+                  :disabled="busyKey === memberKey(member)"
+                  class="text-xs font-semibold px-2 py-1 rounded transition"
+                  :style="{ color: member.is_active ? 'var(--warning)' : 'var(--success)' }">
+                  {{ busyKey === memberKey(member) ? '...' : (member.is_active ? 'Deactivate' : 'Activate') }}
+                </button>
+
+                <button @click="confirmRemove(member)"
+                  :disabled="busyKey === memberKey(member)"
+                  class="p-1 rounded transition"
+                  :style="{ color: 'var(--danger)' }"
+                  title="Remove staff">
+                  <TrashIcon class="w-4 h-4" />
+                </button>
               </div>
-              <div class="text-xs px-2 py-1 rounded font-medium"
-                :style="{
-                  backgroundColor: member.is_active ? 'color-mix(in srgb, var(--success) 15%, transparent)' : 'color-mix(in srgb, var(--text-muted) 15%, transparent)',
-                  color: member.is_active ? 'var(--success)' : 'var(--text-muted)'
-                }">
-                {{ member.is_active ? 'Active' : 'Inactive' }}
-              </div>
-              <span class="text-xs px-2 py-1 rounded" :style="{ backgroundColor: 'var(--border-light)', color: 'var(--text-secondary)' }">
-                {{ member.role || 'Staff' }}
-              </span>
-              <button @click="toggleStaffStatus(member)"
-                :disabled="togglingId === member.id"
-                class="text-xs font-semibold px-2 py-1 rounded transition"
-                :style="{ color: member.is_active ? 'var(--danger)' : 'var(--success)' }"
-                @mouseenter="e => e.target.style.backgroundColor = 'var(--border-light)'"
-                @mouseleave="e => e.target.style.backgroundColor = 'transparent'">
-                {{ togglingId === member.id ? '...' : (member.is_active ? 'Deactivate' : 'Activate') }}
-              </button>
             </div>
           </div>
         </div>
@@ -73,44 +95,52 @@
             <SelectBox v-model="inviteForm.role" :options="roleOptions" placeholder="Select role..." />
           </div>
           <div>
-            <label class="label">Password (Optional)</label>
-            <input v-model="inviteForm.password" type="password" class="input" placeholder="Temporary password" />
+            <label class="label">Password (Optional for new accounts)</label>
+            <input v-model="inviteForm.password" type="password" class="input" placeholder="Temporary password (min 8 chars)" />
           </div>
           <div class="flex gap-3">
-            <button type="submit" :disabled="inviting" class="btn-primary flex-1">
+            <button type="submit" :disabled="inviting" class="btn-primary flex-1 justify-center">
               {{ inviting ? 'Adding...' : 'Add Staff' }}
             </button>
-            <button @click="showInviteForm = false; inviteForm = { name: '', email: '', role: 'staff', password: '' }" type="button"
-              class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-              :style="{ color: 'var(--text-secondary)' }"
-              @mouseenter="e => e.target.style.backgroundColor = 'var(--border-light)'"
-              @mouseleave="e => e.target.style.backgroundColor = 'transparent'">
+            <button @click="showInviteForm = false" type="button" class="btn-ghost">
               Cancel
             </button>
           </div>
         </form>
       </div>
     </div>
+
+    <ConfirmModal
+      :show="removeModal.show"
+      :loading="removeModal.loading"
+      title="Remove Staff Member"
+      :message="`Remove ${removeModal.member?.user?.name || 'this user'} from your shop team?`"
+      confirmText="Remove"
+      @confirm="executeRemove"
+      @cancel="removeModal.show = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import Breadcrumb from '@ecom/ui/components/Breadcrumb.vue'
 import SelectBox from '@ecom/ui/components/SelectBox.vue'
+import ConfirmModal from '@ecom/ui/components/ConfirmModal.vue'
 import { staffApi } from '@/api'
 
-import { PlusIcon, UserGroupIcon, Cog6ToothIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, UserGroupIcon, Cog6ToothIcon, TrashIcon } from '@heroicons/vue/24/outline'
 
 const toast = useToast()
 
 const loading = ref(true)
 const staff = ref([])
-const togglingId = ref(null)
+const busyKey = ref(null)
 const showInviteForm = ref(false)
 const inviting = ref(false)
 const inviteForm = ref({ name: '', email: '', role: 'staff', password: '' })
+const removeModal = reactive({ show: false, loading: false, member: null })
 
 const roleOptions = [
   { value: 'staff', label: 'Staff' },
@@ -124,13 +154,22 @@ const breadcrumbItems = computed(() => [
   { label: 'Staff', icon: null },
 ])
 
+function memberKey(member) {
+  return member?.uuid || member?.id
+}
+
+function openInvite() {
+  inviteForm.value = { name: '', email: '', role: 'staff', password: '' }
+  showInviteForm.value = true
+}
+
 async function loadStaff() {
   loading.value = true
   try {
     const res = await staffApi.list()
     staff.value = res.data.data || []
   } catch (e) {
-    console.error('Failed to load staff:', e)
+    toast.error(e.response?.data?.message || 'Failed to load staff members.')
   } finally {
     loading.value = false
   }
@@ -140,33 +179,75 @@ async function inviteStaff() {
   if (!inviteForm.value.name || !inviteForm.value.email) return
   inviting.value = true
   try {
-    await staffApi.store(inviteForm.value)
-    toast.success(`Invitation sent to ${inviteForm.value.email}`)
+    await staffApi.store({
+      name: inviteForm.value.name,
+      email: inviteForm.value.email,
+      role: inviteForm.value.role,
+      ...(inviteForm.value.password ? { password: inviteForm.value.password } : {}),
+    })
+    toast.success(`Added ${inviteForm.value.email} to staff.`)
     showInviteForm.value = false
-    inviteForm.value = { name: '', email: '', role: 'staff', password: '' }
-    loadStaff()
+    await loadStaff()
   } catch (e) {
-    toast.error(e.response?.data?.message || 'Failed to invite staff.')
+    toast.error(e.response?.data?.message || 'Failed to add staff member.')
   } finally {
     inviting.value = false
   }
 }
 
-async function toggleStaffStatus(member) {
-  togglingId.value = member.id
+async function updateRole(member, role) {
+  const key = memberKey(member)
+  busyKey.value = key
   try {
-    const res = await staffApi.toggle(member.id)
+    const res = await staffApi.update(key, { role })
     const updated = res.data.data || res.data
-    // Update the member in the list
-    const idx = staff.value.findIndex(m => m.id === member.id)
+    const idx = staff.value.findIndex(m => memberKey(m) === key)
+    if (idx !== -1) staff.value[idx] = updated
+    toast.success('Staff role updated.')
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Failed to update role.')
+    await loadStaff()
+  } finally {
+    busyKey.value = null
+  }
+}
+
+async function toggleStaffStatus(member) {
+  const key = memberKey(member)
+  busyKey.value = key
+  try {
+    const res = await staffApi.toggle(key)
+    const updated = res.data.data || res.data
+    const idx = staff.value.findIndex(m => memberKey(m) === key)
     if (idx !== -1) staff.value[idx] = updated
     toast.success(updated.is_active ? 'Staff member activated.' : 'Staff member deactivated.')
   } catch (e) {
     toast.error(e.response?.data?.message || 'Failed to update staff status.')
   } finally {
-    togglingId.value = null
+    busyKey.value = null
   }
 }
 
-onMounted(() => loadStaff())
+function confirmRemove(member) {
+  removeModal.member = member
+  removeModal.show = true
+}
+
+async function executeRemove() {
+  if (!removeModal.member) return
+  removeModal.loading = true
+  try {
+    await staffApi.destroy(memberKey(removeModal.member))
+    toast.success('Staff member removed.')
+    removeModal.show = false
+    removeModal.member = null
+    await loadStaff()
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Failed to remove staff member.')
+  } finally {
+    removeModal.loading = false
+  }
+}
+
+onMounted(loadStaff)
 </script>

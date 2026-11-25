@@ -11,6 +11,68 @@
     <h1 class="font-bold" :style="{ color: 'var(--text-primary)' }">{{ pageTitle }}</h1>
 
     <div class="ml-auto flex items-center gap-1">
+      <!-- Notifications Dropdown -->
+      <div class="relative" ref="notifDropdownRef">
+        <button @click="toggleNotifDropdown"
+          class="navbar-btn relative p-2 rounded-lg transition flex items-center justify-center"
+          :style="{ backgroundColor: isNotifOpen ? 'var(--border-light)' : 'transparent', color: 'var(--navbar-text)' }"
+          title="Notifications">
+          <BellIcon class="w-5 h-5" />
+          <span v-if="unreadCount > 0"
+            class="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+            :style="{ backgroundColor: 'var(--danger)' }">
+            {{ unreadCount > 99 ? '99+' : unreadCount }}
+          </span>
+        </button>
+
+        <transition name="dropdown">
+          <div v-if="isNotifOpen"
+            class="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl shadow-lg border z-[80] overflow-hidden"
+            :style="{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-dropdown)' }">
+            <div class="flex items-center justify-between px-4 py-3 border-b" :style="{ borderColor: 'var(--border)' }">
+              <div>
+                <p class="text-sm font-bold" :style="{ color: 'var(--text-primary)' }">Notifications</p>
+                <p class="text-[11px]" :style="{ color: 'var(--text-muted)' }">
+                  {{ unreadCount > 0 ? `${unreadCount} unread` : 'All caught up' }}
+                </p>
+              </div>
+              <button v-if="unreadCount > 0" @click="markAllAsRead"
+                class="text-xs font-semibold hover:underline"
+                :style="{ color: 'var(--color-primary)' }">
+                Mark all read
+              </button>
+            </div>
+
+            <div class="max-h-80 overflow-y-auto divide-y" :style="{ borderColor: 'var(--border-light)' }">
+              <div v-if="notifLoading" class="p-6 text-center text-xs" :style="{ color: 'var(--text-muted)' }">
+                Loading notifications...
+              </div>
+              <div v-else-if="notifications.length === 0" class="p-6 text-center text-xs" :style="{ color: 'var(--text-muted)' }">
+                No notifications yet.
+              </div>
+              <div v-for="n in notifications" :key="n.id"
+                @click="handleNotificationClick(n)"
+                class="px-4 py-3 cursor-pointer transition flex items-start gap-3"
+                :style="{ backgroundColor: n.read_at ? 'transparent' : 'color-mix(in srgb, var(--color-primary) 6%, transparent)' }">
+                <span class="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                  :style="{ backgroundColor: n.read_at ? 'transparent' : 'var(--color-primary)' }"></span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-semibold truncate" :style="{ color: 'var(--text-primary)' }">
+                    {{ n.title || n.data?.title || 'Notification' }}
+                  </p>
+                  <p class="text-xs mt-0.5 line-clamp-2" :style="{ color: 'var(--text-secondary)' }">
+                    {{ n.message || n.data?.message || n.data?.body || '' }}
+                  </p>
+                  <p class="text-[10px] mt-1" :style="{ color: 'var(--text-muted)' }">
+                    {{ formatNotifTime(n.created_at) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </transition>
+      </div>
+
       <!-- Theme Switcher -->
       <div class="relative" ref="themeSwitcherRef">
         <button @click="isThemeOpen = !isThemeOpen"
@@ -84,11 +146,13 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import { notificationApi } from '@/api'
 import {
   Bars3Icon,
+  BellIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/vue/24/outline'
@@ -96,56 +160,130 @@ import {
 defineEmits(['toggle-sidebar'])
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const theme = useThemeStore()
 
+const isNotifOpen = ref(false)
 const isThemeOpen = ref(false)
 const isProfileDropdownOpen = ref(false)
+const notifDropdownRef = ref(null)
 const themeSwitcherRef = ref(null)
 const profileDropdownRef = ref(null)
+const notifications = ref([])
+const unreadCount = ref(0)
+const notifLoading = ref(false)
 
 const currentThemeColor = computed(() => {
   return theme.themes.find(t => t.id === theme.colorTheme)?.color || '#2E7D32'
 })
 
 const pageRoutes = {
-  '/': 'Dashboard',
-  '/products': 'All Products',
   '/products/create': 'New Product',
+  '/products': 'All Products',
   '/orders': 'Orders',
-  '/inventory': 'Stock Overview',
   '/inventory/logs': 'Stock History',
+  '/inventory': 'Stock Overview',
   '/coupons': 'Coupons',
   '/reviews': 'Reviews',
-  '/wallet': 'Wallet',
   '/wallet/payouts': 'Payouts',
   '/wallet/transactions': 'Transactions',
-  '/shipping': 'Shipments',
+  '/wallet': 'Wallet',
   '/shipping/pickups': 'Pickups',
+  '/shipping': 'Shipments',
   '/support': 'Support Tickets',
-  '/settings': 'Shop Settings',
-  '/settings/bank': 'Bank Account',
+  '/settings/documents': 'KYC Documents',
+  '/settings/addresses': 'Shop Addresses',
+  '/settings/bank': 'Payout Accounts',
   '/settings/staff': 'Staff Management',
+  '/settings': 'Shop Settings',
+  '/': 'Dashboard',
 }
 
 const pageTitle = computed(() => {
-  for (const [path, title] of Object.entries(pageRoutes)) {
+  if (pageRoutes[route.path]) return pageRoutes[route.path]
+  const sorted = Object.entries(pageRoutes)
+    .filter(([path]) => path !== '/')
+    .sort((a, b) => b[0].length - a[0].length)
+  for (const [path, title] of sorted) {
     if (route.path.startsWith(path)) return title
   }
   return 'Dashboard'
 })
 
+async function fetchNotifications(silent = true) {
+  if (!auth.isLoggedIn) return
+  if (!silent) notifLoading.value = true
+  try {
+    const res = await notificationApi.list({ per_page: 10 })
+    notifications.value = res.data?.data || []
+    unreadCount.value = res.data?.unread ?? 0
+  } catch {
+  } finally {
+    notifLoading.value = false
+  }
+}
+
+function toggleNotifDropdown() {
+  isNotifOpen.value = !isNotifOpen.value
+  if (isNotifOpen.value) {
+    isThemeOpen.value = false
+    isProfileDropdownOpen.value = false
+    fetchNotifications(false)
+  }
+}
+
+async function handleNotificationClick(n) {
+  if (!n.read_at) {
+    try {
+      const res = await notificationApi.markAsRead(n.id)
+      n.read_at = new Date().toISOString()
+      unreadCount.value = res.data?.unread ?? Math.max(0, unreadCount.value - 1)
+    } catch {}
+  }
+  const url = n.action_url || n.data?.action_url
+  if (url && typeof url === 'string' && url.startsWith('/') && !url.startsWith('/vendor/')) {
+    isNotifOpen.value = false
+    router.push(url)
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    await notificationApi.markAllRead()
+    notifications.value.forEach(n => { n.read_at = n.read_at || new Date().toISOString() })
+    unreadCount.value = 0
+  } catch {}
+}
+
+function formatNotifTime(dateStr) {
+  if (!dateStr) return ''
+  const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  return new Date(dateStr).toLocaleDateString()
+}
+
 function toggleProfileDropdown() {
   isProfileDropdownOpen.value = !isProfileDropdownOpen.value
-  if (isProfileDropdownOpen.value) isThemeOpen.value = false
+  if (isProfileDropdownOpen.value) {
+    isThemeOpen.value = false
+    isNotifOpen.value = false
+  }
 }
 
 function handleClickOutside(e) {
+  if (notifDropdownRef.value && !notifDropdownRef.value.contains(e.target)) isNotifOpen.value = false
   if (profileDropdownRef.value && !profileDropdownRef.value.contains(e.target)) isProfileDropdownOpen.value = false
   if (themeSwitcherRef.value && !themeSwitcherRef.value.contains(e.target)) isThemeOpen.value = false
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside))
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  fetchNotifications(true)
+})
 onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
 

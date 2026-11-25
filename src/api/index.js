@@ -18,9 +18,13 @@ client.interceptors.request.use(cfg => {
 client.interceptors.response.use(r => r, err => {
   if (err.response?.status === 401) {
     localStorage.removeItem('vendor_token')
-    window.location.href = '/login'
+    localStorage.removeItem('vendor_user')
+    localStorage.removeItem('vendor_shop')
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login'
+    }
   }
-  if (err.response?.status === 403) useToast().error('Access denied.')
+  if (err.response?.status === 403) useToast().error(err.response?.data?.message || 'Access denied.')
   if (err.response?.status === 500) useToast().error('Server error. Please try again.')
   return Promise.reject(err)
 })
@@ -41,10 +45,30 @@ export const authApi = {
 // VENDOR PROFILE & SHOP
 // ═══════════════════════════════════════════
 export const vendorApi = {
-  profile:        () => client.get('/vendor/profile'),
-  updateProfile:  d  => client.post('/vendor/profile?_method=PUT', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  uploadDocument: d  => client.post('/vendor/documents', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  documents:      () => client.get('/vendor/documents'),
+  profile:        ()   => client.get('/vendor/profile'),
+  updateProfile:  d    => client.post('/vendor/profile?_method=PUT', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  uploadDocument: d    => client.post('/vendor/documents', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  documents:      ()   => client.get('/vendor/documents'),
+  deleteDocument: uuid => client.delete(`/vendor/documents/${uuid}`),
+}
+
+// ═══════════════════════════════════════════
+// PAYOUT BANK ACCOUNTS & SHOP ADDRESSES
+// ═══════════════════════════════════════════
+export const bankAccountApi = {
+  list:       ()       => client.get('/vendor/bank-accounts'),
+  store:      d        => client.post('/vendor/bank-accounts', d),
+  update:     (id, d)  => client.put(`/vendor/bank-accounts/${id}`, d),
+  setDefault: id       => client.post(`/vendor/bank-accounts/${id}/default`),
+  destroy:    id       => client.delete(`/vendor/bank-accounts/${id}`),
+}
+
+export const addressApi = {
+  list:       ()       => client.get('/vendor/addresses'),
+  store:      d        => client.post('/vendor/addresses', d),
+  update:     (id, d)  => client.put(`/vendor/addresses/${id}`, d),
+  setDefault: id       => client.post(`/vendor/addresses/${id}/default`),
+  destroy:    id       => client.delete(`/vendor/addresses/${id}`),
 }
 
 // ═══════════════════════════════════════════
@@ -165,4 +189,14 @@ export const staffApi = {
 export const settingsApi = {
   list:   ()    => client.get('/vendor/settings'),
   update: d     => client.post('/vendor/settings', d),
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════
+export const notificationApi = {
+  list:        p  => client.get('/notifications', { params: p }),
+  markAsRead:  id => client.post(`/notifications/${id}/read`),
+  markAllRead: () => client.post('/notifications/read-all'),
+  destroy:     id => client.delete(`/notifications/${id}`),
 }

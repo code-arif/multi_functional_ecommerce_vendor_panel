@@ -5,7 +5,9 @@
   ]">
     <!-- Logo -->
     <div class="sidebar-logo h-16 flex items-center px-4 gap-3 shrink-0">
-      <div class="logo-icon w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0 text-white">
+      <img v-if="auth.shop?.logo_url" :src="auth.shop.logo_url" :alt="auth.shopName"
+        class="w-10 h-10 rounded-xl object-cover shrink-0 border" :style="{ borderColor: 'var(--sidebar-border)' }" />
+      <div v-else class="logo-icon w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0 text-white">
         {{ auth.shopName?.charAt(0)?.toUpperCase() || 'S' }}
       </div>
       <div v-if="sidebarOpen" class="min-w-0 flex-1">
@@ -95,6 +97,8 @@ import {
   BanknotesIcon,
   UserGroupIcon,
   BuildingStorefrontIcon,
+  DocumentCheckIcon,
+  MapPinIcon,
 } from '@heroicons/vue/24/outline'
 
 defineProps({ sidebarOpen: { type: Boolean, required: true } })
@@ -162,7 +166,9 @@ const navGroups = [
     name: 'Settings', icon: Cog6ToothIcon,
     items: [
       { name: 'Shop Profile', to: '/settings', icon: BuildingStorefrontIcon },
-      { name: 'Bank Account', to: '/settings/bank', icon: BanknotesIcon },
+      { name: 'KYC Documents', to: '/settings/documents', icon: DocumentCheckIcon },
+      { name: 'Shop Addresses', to: '/settings/addresses', icon: MapPinIcon },
+      { name: 'Payout Accounts', to: '/settings/bank', icon: BanknotesIcon },
       { name: 'Staff', to: '/settings/staff', icon: UserGroupIcon },
     ],
   },

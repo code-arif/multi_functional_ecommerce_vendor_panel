@@ -131,6 +131,16 @@ const routes = [
         component: () => import('@/pages/settings/ShopSettingsPage.vue'),
       },
       {
+        path: 'settings/documents',
+        name: 'settings-documents',
+        component: () => import('@/pages/settings/DocumentsPage.vue'),
+      },
+      {
+        path: 'settings/addresses',
+        name: 'settings-addresses',
+        component: () => import('@/pages/settings/AddressesPage.vue'),
+      },
+      {
         path: 'settings/bank',
         name: 'settings-bank',
         component: () => import('@/pages/settings/BankSettingsPage.vue'),
