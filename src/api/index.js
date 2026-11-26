@@ -91,6 +91,19 @@ export const addressApi = {
 }
 
 // ═══════════════════════════════════════════
+// CATALOG (vendor-scoped categories & brands)
+// ═══════════════════════════════════════════
+export const categoryApi = {
+  list:  p => client.get('/vendor/categories', { params: p }),
+  store: d => client.post('/vendor/categories/store', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+}
+
+export const brandApi = {
+  list:  p => client.get('/vendor/brands', { params: p }),
+  store: d => client.post('/vendor/brands/store', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+}
+
+// ═══════════════════════════════════════════
 // PRODUCTS (vendor-scoped)
 // ═══════════════════════════════════════════
 export const productApi = {

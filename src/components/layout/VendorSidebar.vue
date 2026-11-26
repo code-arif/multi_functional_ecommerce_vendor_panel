@@ -110,6 +110,7 @@ import {
   DocumentCheckIcon,
   MapPinIcon,
   ShieldExclamationIcon,
+  TagIcon,
 } from '@heroicons/vue/24/outline'
 
 defineProps({ sidebarOpen: { type: Boolean, required: true } })
@@ -130,6 +131,8 @@ const navGroups = [
     items: [
       { name: 'All Products', to: '/products', icon: ShoppingBagIcon },
       { name: 'Add Product', to: '/products/create', icon: ShoppingBagIcon },
+      { name: 'Categories', to: '/categories', icon: TagIcon },
+      { name: 'Brands', to: '/brands', icon: BuildingStorefrontIcon },
     ],
   },
   {

@@ -119,13 +119,17 @@
             </div>
           </div>
 
-          <!-- Category -->
+          <!-- Organization -->
           <div class="card p-5">
             <h3 class="font-bold mb-4" :style="{ color: 'var(--text-primary)' }">Organization</h3>
             <div class="space-y-3">
               <div>
                 <label class="label">Category</label>
-                <SelectBox v-model="form.category_id" :options="categoryOptions" placeholder="No Category" full-width />
+                <SelectBox v-model="form.category_uuid" :options="categoryOptions" placeholder="No Category" full-width :disabled="isEdit || !!form.product_id" />
+              </div>
+              <div>
+                <label class="label">Brand</label>
+                <SelectBox v-model="form.brand_uuid" :options="brandOptions" placeholder="No Brand" full-width :disabled="isEdit || !!form.product_id" />
               </div>
             </div>
           </div>
@@ -174,7 +178,7 @@ import { useToast } from 'vue-toastification'
 import Breadcrumb from '@ecom/ui/components/Breadcrumb.vue'
 import SelectBox from '@ecom/ui/components/SelectBox.vue'
 import ToggleSwitch from '@ecom/ui/components/ToggleSwitch.vue'
-import { productApi } from '@/api'
+import { productApi, categoryApi, brandApi } from '@/api'
 import { ShoppingBagIcon, PhotoIcon } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
@@ -187,6 +191,7 @@ const errors = ref({})
 const thumbnailPreview = ref(null)
 const thumbnailFile = ref(null)
 const categories = ref([])
+const brands = ref([])
 const existingProducts = ref([])
 
 const breadcrumbItems = computed(() => [
@@ -196,7 +201,12 @@ const breadcrumbItems = computed(() => [
 
 const categoryOptions = computed(() => [
   { value: null, label: 'No Category' },
-  ...categories.value.map(c => ({ value: c.id, label: c.name }))
+  ...categories.value.map(c => ({ value: c.uuid, label: c.name }))
+])
+
+const brandOptions = computed(() => [
+  { value: null, label: 'No Brand' },
+  ...brands.value.map(b => ({ value: b.uuid, label: b.name }))
 ])
 
 const existingProductOptions = computed(() => [
@@ -216,8 +226,8 @@ const form = reactive({
   is_active: true,
   short_description: '',
   description: '',
-  category_id: null,
-  brand_id: null,
+  category_uuid: null,
+  brand_uuid: null,
   meta_title: '',
   meta_description: '',
   thumbnail_url: '',
@@ -239,7 +249,8 @@ function onProductSelect(productId) {
     form.short_description = product.short_description || ''
     form.description = product.description || ''
     form.thumbnail_url = product.thumbnail_url || ''
-    form.category_id = product.category_id || null
+    form.category_uuid = product.category_uuid || null
+    form.brand_uuid = product.brand_uuid || null
     form.price = form.price || product.price
   }
 }
@@ -259,7 +270,8 @@ async function save() {
       fd.append('sku', form.sku || '')
       fd.append('short_description', form.short_description || '')
       fd.append('description', form.description || '')
-      fd.append('category_id', form.category_id || '')
+      if (form.category_uuid) fd.append('category_uuid', form.category_uuid)
+      if (form.brand_uuid) fd.append('brand_uuid', form.brand_uuid)
       fd.append('meta_title', form.meta_title || '')
       fd.append('meta_description', form.meta_description || '')
     }
@@ -306,18 +318,24 @@ async function save() {
 }
 
 onMounted(async () => {
-  // Load categories and available products for linking
-  try {
-    const catRes = await productApi.list({ per_page: 200 })
-    // Extract unique categories from products list
-    const cats = new Map()
-    for (const p of catRes.data.data || []) {
-      if (p.category?.id) cats.set(p.category.id, p.category)
-    }
-    categories.value = Array.from(cats.values())
+  // Load catalog categories, brands, and available products for linking
+  const [catResult, brandResult, prodResult] = await Promise.allSettled([
+    categoryApi.list({ per_page: 200, is_active: true }),
+    brandApi.list({ per_page: 200, is_active: true }),
+    productApi.list({ per_page: 200 }),
+  ])
 
+  if (catResult.status === 'fulfilled') {
+    categories.value = catResult.value.data.data || []
+  }
+
+  if (brandResult.status === 'fulfilled') {
+    brands.value = brandResult.value.data.data || []
+  }
+
+  if (prodResult.status === 'fulfilled') {
     // Store existing products for the "link to existing" dropdown
-    existingProducts.value = (catRes.data.data || []).map(p => ({
+    existingProducts.value = (prodResult.value.data.data || []).map(p => ({
       id: p.id,
       name: p.name,
       sku: p.sku,
@@ -325,10 +343,9 @@ onMounted(async () => {
       thumbnail_url: p.thumbnail_url,
       short_description: p.short_description,
       description: p.description,
-      category_id: p.category?.id || null,
+      category_uuid: p.category?.uuid || null,
+      brand_uuid: p.brand?.uuid || null,
     }))
-  } catch {
-    // Silent fail — categories are optional
   }
 
   // Load existing product data for edit mode
@@ -348,7 +365,8 @@ onMounted(async () => {
       form.sku = p.sku || ''
       form.short_description = p.short_description || ''
       form.description = p.description || ''
-      form.category_id = p.category?.id || null
+      form.category_uuid = p.category?.uuid || null
+      form.brand_uuid = p.brand?.uuid || null
       form.meta_title = p.meta_title || ''
       form.meta_description = p.meta_description || ''
 

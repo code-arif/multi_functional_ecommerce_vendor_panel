@@ -51,6 +51,18 @@ const routes = [
         component: () => import('@/pages/products/ProductFormPage.vue'),
       },
 
+      // Catalog (Categories & Brands)
+      {
+        path: 'categories',
+        name: 'categories',
+        component: () => import('@/pages/catalog/CategoriesPage.vue'),
+      },
+      {
+        path: 'brands',
+        name: 'brands',
+        component: () => import('@/pages/catalog/BrandsPage.vue'),
+      },
+
       // Orders
       {
         path: 'orders',
