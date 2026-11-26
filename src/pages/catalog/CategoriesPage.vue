@@ -92,6 +92,9 @@
 
             <form @submit.prevent="save">
               <div class="p-6 space-y-4">
+                <div v-if="formError" class="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+                  {{ formError }}
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="label">Category Name *</label>
@@ -113,28 +116,38 @@
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ImagePicker v-model="imageFile" label="Thumbnail" :max-size-m-b="2" />
-                  <ImagePicker v-model="bannerFile" label="Banner" :max-size-m-b="2" />
+                  <div>
+                    <ImagePicker v-model="imageFile" label="Thumbnail" :max-size-m-b="2" />
+                    <p v-if="errors.image" class="text-xs text-red-500 mt-1">{{ errors.image[0] }}</p>
+                  </div>
+                  <div>
+                    <ImagePicker v-model="bannerFile" label="Banner" :max-size-m-b="2" />
+                    <p v-if="errors.banner" class="text-xs text-red-500 mt-1">{{ errors.banner[0] }}</p>
+                  </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="label">Meta Title</label>
                     <input v-model="form.meta_title" class="input" placeholder="Optional SEO title" />
+                    <p v-if="errors.meta_title" class="text-xs text-red-500 mt-1">{{ errors.meta_title[0] }}</p>
                   </div>
                   <div>
                     <label class="label">Meta Keywords</label>
                     <input v-model="form.meta_keywords" class="input" placeholder="keyword1, keyword2" />
+                    <p v-if="errors.meta_keywords" class="text-xs text-red-500 mt-1">{{ errors.meta_keywords[0] }}</p>
                   </div>
                 </div>
 
                 <div>
                   <label class="label">Meta Description</label>
                   <textarea v-model="form.meta_description" rows="2" class="input" placeholder="Optional SEO description..." />
+                  <p v-if="errors.meta_description" class="text-xs text-red-500 mt-1">{{ errors.meta_description[0] }}</p>
                 </div>
 
                 <div class="pt-1">
                   <ToggleSwitch v-model="form.is_active" label="Active once approved" />
+                  <p v-if="errors.is_active" class="text-xs text-red-500 mt-1">{{ errors.is_active[0] }}</p>
                 </div>
               </div>
 
@@ -179,6 +192,7 @@ const showForm = ref(false)
 const search = ref('')
 const statusFilter = ref('')
 const errors = ref({})
+const formError = ref('')
 const imageFile = ref(null)
 const bannerFile = ref(null)
 
@@ -246,6 +260,7 @@ async function loadParentOptions() {
 
 function openForm() {
   errors.value = {}
+  formError.value = ''
   imageFile.value = null
   bannerFile.value = null
   Object.assign(form, {
@@ -264,6 +279,7 @@ function openForm() {
 async function save() {
   saving.value = true
   errors.value = {}
+  formError.value = ''
   try {
     const fd = new FormData()
     fd.append('name', form.name)
@@ -281,12 +297,13 @@ async function save() {
     showForm.value = false
     load(1)
   } catch (e) {
-    if (e.response?.status === 422) {
-      errors.value = e.response.data.errors || {}
-      const firstError = Object.values(errors.value)[0]?.[0]
-      toast.error(firstError || 'Validation failed.')
-    } else {
-      toast.error(e.response?.data?.message || 'Failed to submit category proposal.')
+    const status = e.response?.status
+    errors.value = e.response?.data?.errors || {}
+    const firstError = Object.values(errors.value)[0]?.[0]
+    const message = firstError || e.response?.data?.message || 'Failed to submit category proposal.'
+    if (!firstError) formError.value = message
+    if (status !== 403 && status !== 500) {
+      toast.error(message)
     }
   } finally {
     saving.value = false
