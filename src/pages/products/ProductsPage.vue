@@ -63,6 +63,21 @@
         </td>
 
         <td class="table-cell">
+          <span
+            v-if="item.is_owner"
+            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700"
+          >
+            My Product
+          </span>
+          <span
+            v-else
+            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600"
+          >
+            Platform
+          </span>
+        </td>
+
+        <td class="table-cell">
           <template v-if="item.vendor_price">
             <p class="font-semibold text-sm" :style="{ color: 'var(--text-primary)' }">
               ৳{{ Number(item.vendor_price.price || item.vendor_price.sale_price || 0).toLocaleString() }}
@@ -118,10 +133,12 @@
 
     <ConfirmModal
       :show="!!deleteTarget"
-      title="Remove Product"
-      :message="`Remove '${deleteTarget?.name}' from your shop? It can be re-added later.`"
+      :title="deleteTarget?.is_owner ? 'Delete Product' : 'Remove Product'"
+      :message="deleteTarget?.is_owner
+        ? `Delete '${deleteTarget?.name}' permanently from your shop and catalog?`
+        : `Remove '${deleteTarget?.name}' from your shop? It can be re-added later.`"
       :loading="deleting"
-      confirm-text="Remove"
+      :confirm-text="deleteTarget?.is_owner ? 'Delete' : 'Remove'"
       @confirm="doDelete"
       @cancel="deleteTarget = null"
     />
@@ -173,6 +190,7 @@ const statusOptions = [
 const columns = [
   { key: 'name', label: 'Product', class: 'w-64' },
   { key: 'type', label: 'Type', class: 'w-24' },
+  { key: 'owner', label: 'Owner', class: 'w-28' },
   { key: 'price', label: 'Price', class: 'w-28' },
   { key: 'stock', label: 'Stock', class: 'w-20' },
   { key: 'status', label: 'Status', class: 'w-24' },

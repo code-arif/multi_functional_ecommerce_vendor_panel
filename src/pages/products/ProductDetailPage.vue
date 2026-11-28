@@ -1,10 +1,26 @@
 <template>
   <div class="w-full">
-    <div class="flex items-center justify-between mb-6">
-      <Breadcrumb :items="breadcrumbItems" />
-      <router-link :to="`/products/${product?.uuid}/edit`" class="btn-primary text-sm" v-if="product">
-        Edit Pricing
-      </router-link>
+    <Breadcrumb :items="breadcrumbItems" />
+
+    <!-- Inactive / Pending Admin Approval Warning -->
+    <div
+      v-if="product && product.status !== 'active'"
+      class="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5 text-red-800"
+    >
+      <ExclamationTriangleIcon class="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+      <div class="text-sm">
+        <p class="font-semibold">
+          {{ product.is_owner ? 'Waiting for Admin Approval' : 'Product Currently Inactive' }}
+        </p>
+        <p class="text-xs text-red-700 mt-0.5">
+          <template v-if="product.is_owner">
+            This product is currently <strong>{{ product.status }}</strong> and waiting for admin approval. It will appear on the storefront once approved by an administrator.
+          </template>
+          <template v-else>
+            This platform catalog product is currently <strong>{{ product.status }}</strong> and is hidden from customers until activated by Admin.
+          </template>
+        </p>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -220,7 +236,7 @@
             </div>
           </div>
           <router-link :to="`/products/${product.uuid}/edit`" class="btn-primary text-sm mt-4 w-full text-center block">
-            Update Pricing
+            {{ product.is_owner ? 'Edit Product & Pricing' : 'Update Pricing' }}
           </router-link>
         </div>
 
@@ -228,6 +244,13 @@
         <div class="card p-5">
           <h3 class="font-bold mb-4" :style="{ color: 'var(--text-primary)' }">Product Status</h3>
           <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm" :style="{ color: 'var(--text-muted)' }">Ownership</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                :class="product.is_owner ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">
+                {{ product.is_owner ? 'My Product' : 'Platform Catalog' }}
+              </span>
+            </div>
             <div class="flex items-center justify-between">
               <span class="text-sm" :style="{ color: 'var(--text-muted)' }">Publish Status</span>
               <StatusBadge :value="product.status" />
@@ -258,6 +281,19 @@
           <h3 class="font-bold mb-3" :style="{ color: 'var(--text-primary)' }">Category</h3>
           <StatusBadge :value="product.category.name" />
         </div>
+
+        <!-- Actions -->
+        <div class="card p-5">
+          <h3 class="font-bold mb-3" :style="{ color: 'var(--text-primary)' }">Actions</h3>
+          <router-link
+            :to="`/products/${product.uuid}/edit`"
+            class="flex items-center justify-center gap-2 w-full text-sm font-semibold px-3 py-2.5 rounded-lg border transition"
+            :style="{ borderColor: 'var(--border-color)', color: 'var(--color-primary)' }"
+          >
+            <PencilSquareIcon class="w-4 h-4" />
+            {{ product.is_owner ? 'Edit Product Details' : 'Edit Pricing & Stock' }}
+          </router-link>
+        </div>
       </div>
     </div>
   </div>
@@ -270,7 +306,7 @@ import { useToast } from 'vue-toastification'
 import Breadcrumb from '@ecom/ui/components/Breadcrumb.vue'
 import StatusBadge from '@ecom/ui/components/StatusBadge.vue'
 import { productApi } from '@/api'
-import { ShoppingBagIcon } from '@heroicons/vue/24/outline'
+import { ShoppingBagIcon, ExclamationTriangleIcon, PencilSquareIcon } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
 const toast = useToast()

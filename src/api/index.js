@@ -111,6 +111,7 @@ export const productApi = {
   show:        uuid     => client.get(`/vendor/products/${uuid}`),
   store:       d        => client.post('/vendor/products', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
   update:      (uuid,d) => client.post(`/vendor/products/${uuid}?_method=PUT`, d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  uploadImage: d        => client.post('/vendor/products/upload-image', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
   uploadVideo: d        => client.post('/vendor/products/upload-video', d, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 }),
   destroy:     uuid     => client.delete(`/vendor/products/${uuid}`),
 }
