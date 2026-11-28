@@ -41,12 +41,12 @@ const routes = [
         component: () => import('@/pages/products/ProductFormPage.vue'),
       },
       {
-        path: 'products/:id',
+        path: 'products/:uuid',
         name: 'products-detail',
         component: () => import('@/pages/products/ProductDetailPage.vue'),
       },
       {
-        path: 'products/:id/edit',
+        path: 'products/:uuid/edit',
         name: 'products-edit',
         component: () => import('@/pages/products/ProductFormPage.vue'),
       },

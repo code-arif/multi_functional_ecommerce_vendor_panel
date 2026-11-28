@@ -2,7 +2,7 @@
   <div class="w-full">
     <div class="flex items-center justify-between mb-6">
       <Breadcrumb :items="breadcrumbItems" />
-      <router-link :to="`/products/${product?.id}/edit`" class="btn-primary text-sm" v-if="product">
+      <router-link :to="`/products/${product?.uuid}/edit`" class="btn-primary text-sm" v-if="product">
         Edit Pricing
       </router-link>
     </div>
@@ -48,6 +48,46 @@
                 }">
                 <img :src="img.url" class="w-full h-full object-cover" />
               </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Videos -->
+        <div v-if="product.videos?.length" class="card p-5">
+          <h3 class="font-bold mb-4" :style="{ color: 'var(--text-primary)' }">
+            Product Videos
+            <span class="text-xs font-normal ml-1" :style="{ color: 'var(--text-muted)' }">({{ product.videos.length }})</span>
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div v-for="vid in product.videos" :key="vid.uuid || vid.id"
+              class="rounded-xl border overflow-hidden"
+              :style="{ borderColor: 'var(--border)' }">
+              <div class="aspect-video w-full bg-black">
+                <iframe
+                  v-if="vid.embed_url"
+                  :src="vid.embed_url"
+                  class="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                />
+                <video
+                  v-else
+                  controls
+                  preload="metadata"
+                  :poster="vid.poster_url || undefined"
+                  :src="vid.video_url"
+                  class="w-full h-full object-contain"
+                />
+              </div>
+              <div class="p-3 flex items-center justify-between gap-2" :style="{ background: 'var(--surface)' }">
+                <p class="text-xs font-semibold truncate" :style="{ color: 'var(--text-primary)' }">
+                  {{ vid.title || vid.external_url || 'Product Video' }}
+                </p>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span v-if="vid.is_primary" class="badge badge-green">Primary</span>
+                  <span class="badge badge-gray uppercase">{{ vid.processing_status }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -179,7 +219,7 @@
               <StatusBadge :value="vendorPricing?.is_active !== false ? 'active' : 'inactive'" />
             </div>
           </div>
-          <router-link :to="`/products/${product.id}/edit`" class="btn-primary text-sm mt-4 w-full text-center block">
+          <router-link :to="`/products/${product.uuid}/edit`" class="btn-primary text-sm mt-4 w-full text-center block">
             Update Pricing
           </router-link>
         </div>
@@ -242,7 +282,7 @@ const activeImage = ref(null)
 
 const breadcrumbItems = computed(() => [
   { label: 'Products', to: '/products', icon: ShoppingBagIcon },
-  { label: product.value?.name || `Product #${route.params.id}` },
+  { label: product.value?.name || 'Product Detail' },
 ])
 
 const vendorPricing = computed(() => product.value?.vendor_pricing || null)
@@ -267,7 +307,7 @@ async function load() {
   loading.value = true
   error.value = null
   try {
-    const res = await productApi.show(route.params.id)
+    const res = await productApi.show(route.params.uuid)
     product.value = res.data.data
     activeImage.value = allImages.value[0]?.url || null
   } catch (e) {

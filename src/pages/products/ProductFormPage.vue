@@ -153,6 +153,69 @@
             <input ref="thumbInput" type="file" accept="image/*" class="hidden" @change="onThumbChange" />
             <p v-if="errors.thumbnail" class="text-red-500 text-xs mt-1">{{ errors.thumbnail[0] }}</p>
           </div>
+
+          <!-- Product Videos (new product creation) -->
+          <div v-if="!isEdit && !form.product_id" class="card p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold" :style="{ color: 'var(--text-primary)' }">Product Videos</h3>
+              <span class="text-xs" :style="{ color: 'var(--text-muted)' }">{{ uploadedVideos.length }} video(s)</span>
+            </div>
+
+            <div
+              class="border-2 border-dashed rounded-xl p-4 text-center hover:opacity-75 transition cursor-pointer"
+              :style="{ borderColor: 'var(--border)' }"
+              @click="$refs.videoInput.click()">
+              <FilmIcon class="w-7 h-7 mx-auto mb-1.5" :style="{ color: 'var(--text-muted)' }" />
+              <p class="text-xs font-medium" :style="{ color: 'var(--text-primary)' }">Upload Product Video</p>
+              <p class="text-[11px] mt-0.5" :style="{ color: 'var(--text-muted)' }">MP4, WebM, MOV (max 100MB)</p>
+            </div>
+            <input ref="videoInput" type="file" accept="video/mp4,video/webm,video/quicktime" class="hidden" @change="onVideoUpload" />
+
+            <div class="mt-4 space-y-2">
+              <label class="label text-xs">Or Add YouTube / Vimeo / Direct Video URL</label>
+              <input v-model="videoUrlTitle" class="input text-xs" placeholder="Video title (optional)" />
+              <div class="flex gap-2">
+                <input v-model="videoUrlInput" type="url" class="input text-xs flex-1" placeholder="https://youtube.com/watch?v=..." />
+                <button type="button" @click="addExternalVideo" class="btn-secondary text-xs px-3 py-1.5">Add</button>
+              </div>
+            </div>
+
+            <div v-if="uploadedVideos.length" class="space-y-2.5 mt-4">
+              <div v-for="(vid, vi) in uploadedVideos" :key="vi"
+                class="flex items-center justify-between gap-2 p-2.5 rounded-xl border"
+                :style="{ borderColor: 'var(--border)' }">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                      {{ vid.source_type || 'upload' }}
+                    </span>
+                    <span v-if="vid.is_primary"
+                      class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2E7D32] text-white">
+                      Primary
+                    </span>
+                    <span v-if="vid.uploading" class="text-[11px] text-amber-600 font-medium">Uploading...</span>
+                  </div>
+                  <p class="text-xs font-medium truncate mt-1" :style="{ color: 'var(--text-primary)' }">
+                    {{ vid.title || vid.external_url || vid.video_path }}
+                  </p>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" @click="setPrimaryVideo(vi)"
+                    class="p-1.5 rounded-lg border text-gray-500 hover:text-amber-500 transition"
+                    :style="{ borderColor: 'var(--border)' }"
+                    title="Set Primary Video">
+                    <StarIcon class="w-3.5 h-3.5" />
+                  </button>
+                  <button type="button" @click="removeVideo(vi)"
+                    class="p-1.5 rounded-lg border text-red-500 hover:bg-red-50 transition"
+                    :style="{ borderColor: 'var(--border)' }"
+                    title="Remove Video">
+                    <TrashIcon class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -179,17 +242,21 @@ import Breadcrumb from '@ecom/ui/components/Breadcrumb.vue'
 import SelectBox from '@ecom/ui/components/SelectBox.vue'
 import ToggleSwitch from '@ecom/ui/components/ToggleSwitch.vue'
 import { productApi, categoryApi, brandApi } from '@/api'
-import { ShoppingBagIcon, PhotoIcon } from '@heroicons/vue/24/outline'
+import { ShoppingBagIcon, PhotoIcon, FilmIcon, StarIcon, TrashIcon } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const isEdit = computed(() => !!route.params.id)
+const isEdit = computed(() => !!route.params.uuid)
 
 const saving = ref(false)
 const errors = ref({})
 const thumbnailPreview = ref(null)
 const thumbnailFile = ref(null)
+const uploadedVideos = ref([])
+const videoUrlInput = ref('')
+const videoUrlTitle = ref('')
+const videoInput = ref(null)
 const categories = ref([])
 const brands = ref([])
 const existingProducts = ref([])
@@ -240,6 +307,77 @@ function onThumbChange(e) {
   thumbnailPreview.value = URL.createObjectURL(f)
 }
 
+async function onVideoUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  e.target.value = ''
+
+  if (file.size > 100 * 1024 * 1024) {
+    toast.error(`${file.name} exceeds 100MB limit.`)
+    return
+  }
+
+  const idx = uploadedVideos.value.length
+  uploadedVideos.value.push({
+    source_type: 'upload',
+    title: file.name.replace(/\.[^/.]+$/, ''),
+    video_path: null,
+    is_primary: idx === 0 && !uploadedVideos.value.some(v => v.is_primary),
+    uploading: true,
+  })
+
+  try {
+    const fd = new FormData()
+    fd.append('video', file)
+    const res = await productApi.uploadVideo(fd)
+    const data = res.data.data
+    uploadedVideos.value[idx] = {
+      ...uploadedVideos.value[idx],
+      video_path: data.path,
+      mime_type: data.mime_type || file.type,
+      file_size: data.file_size || file.size,
+      uploading: false,
+    }
+    toast.success(`${file.name} uploaded.`)
+  } catch (err) {
+    uploadedVideos.value.splice(idx, 1)
+    toast.error(err.response?.data?.message || `Failed to upload ${file.name}.`)
+  }
+}
+
+function addExternalVideo() {
+  const url = videoUrlInput.value.trim()
+  if (!url) return
+
+  let sourceType = 'external'
+  if (/youtube\.com|youtu\.be/i.test(url)) sourceType = 'youtube'
+  else if (/vimeo\.com/i.test(url)) sourceType = 'vimeo'
+
+  uploadedVideos.value.push({
+    source_type: sourceType,
+    title: videoUrlTitle.value.trim() || url,
+    external_url: url,
+    is_primary: uploadedVideos.value.length === 0,
+    uploading: false,
+  })
+
+  videoUrlInput.value = ''
+  videoUrlTitle.value = ''
+}
+
+function setPrimaryVideo(index) {
+  uploadedVideos.value.forEach((v, i) => {
+    v.is_primary = i === index
+  })
+}
+
+function removeVideo(index) {
+  uploadedVideos.value.splice(index, 1)
+  if (!uploadedVideos.value.some(v => v.is_primary) && uploadedVideos.value.length) {
+    uploadedVideos.value[0].is_primary = true
+  }
+}
+
 function onProductSelect(productId) {
   if (!productId) return
   const product = existingProducts.value.find(p => p.id === productId)
@@ -274,6 +412,24 @@ async function save() {
       if (form.brand_uuid) fd.append('brand_uuid', form.brand_uuid)
       fd.append('meta_title', form.meta_title || '')
       fd.append('meta_description', form.meta_description || '')
+
+      const validVideos = uploadedVideos.value
+        .filter(v => v.video_path || v.external_url)
+        .map((v, index) => ({
+          source_type: v.source_type || 'upload',
+          title: v.title || null,
+          video_path: v.video_path || null,
+          external_url: v.external_url || null,
+          poster_path: v.poster_path || null,
+          mime_type: v.mime_type || null,
+          file_size: v.file_size || null,
+          is_primary: !!v.is_primary,
+          sort_order: index,
+        }))
+
+      if (validVideos.length) {
+        fd.append('videos', JSON.stringify(validVideos))
+      }
     }
 
     // Always send pricing fields
@@ -291,7 +447,7 @@ async function save() {
 
     if (isEdit.value) {
       // For edit, we only update vendor pricing — use POST with _method=PUT
-      await productApi.update(route.params.id, fd)
+      await productApi.update(route.params.uuid, fd)
       toast.success('Product pricing updated.')
     } else {
       await productApi.store(fd)
@@ -351,7 +507,7 @@ onMounted(async () => {
   // Load existing product data for edit mode
   if (isEdit.value) {
     try {
-      const res = await productApi.show(route.params.id)
+      const res = await productApi.show(route.params.uuid)
       const p = res.data.data
 
       form.price = p.vendor_pricing?.price ?? p.price ?? null

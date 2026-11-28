@@ -107,11 +107,12 @@ export const brandApi = {
 // PRODUCTS (vendor-scoped)
 // ═══════════════════════════════════════════
 export const productApi = {
-  list:    p      => client.get('/vendor/products', { params: p }),
-  show:    id     => client.get(`/vendor/products/${id}`),
-  store:   d      => client.post('/vendor/products', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  update:  (id,d) => client.post(`/vendor/products/${id}?_method=PUT`, d, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  destroy: id     => client.delete(`/vendor/products/${id}`),
+  list:        p        => client.get('/vendor/products', { params: p }),
+  show:        uuid     => client.get(`/vendor/products/${uuid}`),
+  store:       d        => client.post('/vendor/products', d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update:      (uuid,d) => client.post(`/vendor/products/${uuid}?_method=PUT`, d, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  uploadVideo: d        => client.post('/vendor/products/upload-video', d, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 }),
+  destroy:     uuid     => client.delete(`/vendor/products/${uuid}`),
 }
 
 // ═══════════════════════════════════════════
